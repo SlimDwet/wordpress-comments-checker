@@ -87,19 +87,21 @@ function wcc_save_terms() {
         if($result) {
             // Let's store the new terms
             foreach ($term as $key => $new_term) {
-                $insert_result = $wpdb->query(
-                    $wpdb->prepare(
-                        "INSERT INTO ".$wpdb->prefix.WCC_TABLE_NAME." (term, created) VALUES(%s, %s)",
-                        esc_html($new_term),
-                        date('Y-m-d H:i:s')
-                    )
-                );
-                if(!$insert_result) {
-                    // Error while insert new terms
-                    $errors_tab = array('type' => 'error', 'message' => 'An error occured while terms adding');
-                } else {
-                    // New terms added
-                    $errors_tab = array('type' => 'success', 'message' => 'Terms added with success');
+                if(strlen($new_term) > 0) {
+                    $insert_result = $wpdb->query(
+                        $wpdb->prepare(
+                            "INSERT INTO ".$wpdb->prefix.WCC_TABLE_NAME." (term, created) VALUES(%s, %s)",
+                            esc_html($new_term),
+                            date('Y-m-d H:i:s')
+                        )
+                    );
+                    if(!$insert_result) {
+                        // Error while insert new terms
+                        $errors_tab = array('type' => 'error', 'message' => 'An error occured while terms adding');
+                    } else {
+                        // New terms added
+                        $errors_tab = array('type' => 'success', 'message' => 'Terms added with success');
+                    }
                 }
             }
         } else {
@@ -127,7 +129,8 @@ function wcc_check_new_comment($comment_id) {
             // Unwanted term found so delete the comment
             if(wp_delete_comment($comment_id, true)) {
                 // Add to post URL a parameter to inform user that his comment is invalid
-                $post_permalink = get_permalink($comment->comment_post_ID).'?wcc_invalid_comment='.$term_obj->term;
+                $post_permalink = get_permalink($comment->comment_post_ID);
+                $post_permalink .= (strpos($post_permalink, '?') === false) ? '?wcc_invalid_comment='.$term_obj->term : '&wcc_invalid_comment='.$term_obj->term;
                 // Redirect to post URL
                 if(wp_redirect($post_permalink)) {
                     exit;
@@ -142,8 +145,11 @@ function wcc_check_new_comment($comment_id) {
  * @return [type] [description]
  */
 function wcc_deleted_comment_info() {
-    if(isset($_GET['wcc_invalid_comment'])) {
-        echo '<script type="text/javascript">alert("'.__("Your comment contain an unauthorized term", 'wcc-domain').' : '.$_GET['wcc_invalid_comment'].'");</script>';
+    $query = parse_url($_SERVER['REQUEST_URI'], PHP_URL_QUERY);
+    parse_str($query, $params);
+    if(isset($params['wcc_invalid_comment'])) {
+        $wcc_param = $params['wcc_invalid_comment'];
+        echo '<script type="text/javascript">alert("'.__("Your comment contain an unauthorized term", 'wcc-domain').' : '.$wcc_param.'");</script>';
     }
 }
 
